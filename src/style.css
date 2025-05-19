@@ -1,0 +1,13 @@
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+
+body {
+  font-family: 'Kanit', sans-serif;
+  background-color: #fff;
+  color: #333;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* ลบส่วน DaisyUI และ Tailwind ออกแล้ว */
+
+/* พื้นที่สำหรับ CSS อื่นๆ ในอนาคต */

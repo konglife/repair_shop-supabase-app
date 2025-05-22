@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { supabase } from '../supabaseClient'; // Import supabase client โดยตรง
 import { useSupabaseTable } from '../composables/useSupabaseTable';
 import type { Category } from '../types/category';
 
@@ -10,15 +11,26 @@ export const useCategoryStore = defineStore('category', {
     selectedCategory: null as Category | null,
     loading: false,
     error: null as any | null,
+    totalCategories: 0, // เพิ่ม totalCategories
   }),
   actions: {
-    async fetchAllCategories() {
+    async fetchAllCategories(page: number = 1, pageSize: number = 10) { // เพิ่ม page และ pageSize
       this.loading = true;
       this.error = null;
       try {
-        const data = await categoryTable.getAll();
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize - 1;
+        
+        const { data, count, error } = await supabase // ใช้ supabase ที่ import โดยตรง
+          .from('categories')
+          .select('*', { count: 'exact' })
+          .range(start, end);
+
+        if (error) throw error;
+
         if (data !== null && data !== undefined) {
           this.categories = data as unknown as Category[];
+          this.totalCategories = count || 0; // อัปเดต totalCategories
         }
       } catch (err) {
         this.error = err;

@@ -1,7 +1,8 @@
 <template>
-  <div class="navbar">
+  <!-- ใช้ w-100 เพื่อให้ navbar กว้างเต็มพื้นที่ -->
+  <div class="d-flex align-center justify-space-between w-100">
     <!-- Left Section -->
-    <div class="navbar-left">
+    <div class="d-flex align-center">
       <!-- Sidebar Toggle Button -->
       <SidebarToggle 
         :collapsed="isMobile || sidebarCollapsed" 
@@ -13,36 +14,62 @@
     </div>
 
     <!-- Right Actions -->
-    <div class="navbar-right">
+    <v-toolbar-items class="d-flex align-center">
       <!-- Dark Mode Toggle -->
-      <ThemeToggle :is-dark="isDark" @toggle="toggleDark" />
+      <ThemeToggle :is-dark="isDark" @toggle="toggleDark" class="mr-2" />
 
       <!-- Notification Badge -->
       <NotificationBadge 
         v-if="!isMobile" 
         :count="notificationCount" 
+        class="mr-2"
       />
 
-      <!-- User Name - Only visible on larger screens -->
-      <span v-if="!isMobile" class="user-name">{{ userDisplayName }}</span>
+      <!-- User Menu และปุ่ม Logout - แสดงเมื่อล็อกอินแล้ว -->
+      <template v-if="isLoggedIn">
+        <!-- User Name - Only visible on larger screens -->
+        <span v-if="!isMobile" class="user-name mr-2">{{ userDisplayName }}</span>
+        
+        <!-- User Dropdown - ใช้ UserMenu คอมโพเนนต์ -->
+        <UserMenu 
+          :display-name="userDisplayName" 
+          :avatar-url="userAvatarUrl"
+          @command="handleCommand"
+          class="mr-2"
+        />
+        
+        <!-- Logout Button (Icon only for better UI/UX) -->
+        <v-btn icon variant="text" color="error" @click="logout" class="mr-2">
+          <v-icon>mdi-logout</v-icon>
+          <v-tooltip activator="parent" location="bottom">ออกจากระบบ</v-tooltip>
+        </v-btn>
+      </template>
       
-      <!-- User Dropdown -->
-      <UserMenu 
-        :display-name="userDisplayName" 
-        :avatar-url="userAvatarUrl"
-        @command="(cmd) => $emit('command', cmd)"
-      />
-    </div>
+      <!-- Login Button - แสดงเมื่อยังไม่ได้ล็อกอิน -->
+      <v-btn v-else variant="outlined" color="primary" @click="router.push('/login')" class="mr-2">
+        <v-icon class="mr-2">mdi-login</v-icon>
+        เข้าสู่ระบบ
+      </v-btn>
+    </v-toolbar-items>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import NavbarBreadcrumbs from './common/NavbarBreadcrumbs.vue';
 import ThemeToggle from './common/ThemeToggle.vue';
 import NotificationBadge from './common/NotificationBadge.vue';
-import UserMenu from './common/UserMenu.vue';
 import SidebarToggle from './common/SidebarToggle.vue';
+import UserMenu from './common/UserMenu.vue';
+import { useAuthStore } from '../stores/auth'; // Import useAuthStore
+
+// ใช้ router สำหรับการนำทาง
+const router = useRouter();
+
+// ดึงข้อมูลการตรวจสอบสิทธิ์จาก useAuthStore
+const authStore = useAuthStore();
+const { user, isLoggedIn } = authStore; // ดึง user และ isLoggedIn จาก store
 
 // Currently using emit events instead of props
 const emit = defineEmits(['toggle-sidebar', 'toggle-dark', 'command']);
@@ -51,9 +78,38 @@ const emit = defineEmits(['toggle-sidebar', 'toggle-dark', 'command']);
 const isMobile = ref(false);
 const sidebarCollapsed = ref(false);
 const isDark = ref(false);
-const userDisplayName = ref('ผู้ใช้งาน');
-const userAvatarUrl = ref('');
 const notificationCount = ref(0);
+
+// คำนวณชื่อที่จะแสดงและ URL ของรูปโปรไฟล์
+const userDisplayName = computed(() => user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'ผู้ใช้งาน');
+const userAvatarUrl = computed(() => user?.user_metadata?.avatar_url || '');
+
+// ฟังก์ชันสำหรับการออกจากระบบ
+const logout = async () => {
+  try {
+    await authStore.signOut(); // เรียกใช้ signOut จาก authStore
+    router.push('/login'); // นำทางไปยังหน้า login หลังจากออกจากระบบ
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
+};
+
+// ฟังก์ชันจัดการคำสั่งจากเมนูผู้ใช้
+const handleCommand = (command: string) => {
+  switch (command) {
+    case 'profile':
+      router.push('/profile');
+      break;
+    case 'settings':
+      router.push('/settings');
+      break;
+    case 'logout':
+      logout();
+      break;
+    default:
+      break;
+  }
+};
 
 const toggleSidebar = () => {
   emit('toggle-sidebar');
@@ -292,4 +348,4 @@ const toggleDark = () => {
   transform: translateY(0);
   visibility: visible;
 }
-</style> 
+</style>

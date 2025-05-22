@@ -24,17 +24,17 @@ interface RegisterData {
 
 // interface AuthState ถูกลบออกเนื่องจากไม่ได้ใช้งาน
 
+// Singleton state variables defined at the module scope
+const user = ref<User | null>(null);
+const token = ref<string | null>(null);
+const loading = ref<boolean>(false);
+const error = ref<string | null>(null);
+const isInitialized = ref<boolean>(false);
+
 export function useAuth() {
   const router = useRouter();
 
-  // สถานะการตรวจสอบสิทธิ์
-  const user = ref<User | null>(null);
-  const token = ref<string | null>(null);
-  const loading = ref<boolean>(false);
-  const error = ref<string | null>(null);
-  const isInitialized = ref<boolean>(false);
-
-  // computed properties
+  // computed properties (now use module-scoped state)
   const isLoggedIn = computed(() => !!user.value);
   const isAdmin = computed(() => user.value?.role === 'admin');
 
@@ -42,35 +42,64 @@ export function useAuth() {
    * ตรวจสอบสถานะการเข้าสู่ระบบเมื่อเริ่มต้น
    */
   const initialize = async () => {
-    if (isInitialized.value) return;
+    console.log('[useAuth] initialize: Starting.');
+    if (isInitialized.value) {
+      console.log('[useAuth] initialize: Already initialized, returning.');
+      return;
+    }
     
     loading.value = true;
     error.value = null;
+    console.log('[useAuth] initialize: Set loading to true, error to null.');
     
     try {
       // ดึงข้อมูล token จาก localStorage
       const savedToken = localStorage.getItem('auth_token');
+      console.log('[useAuth] initialize: localStorage auth_token:', savedToken);
       if (!savedToken) {
+        console.log('[useAuth] initialize: No saved token found. Clearing user and returning.');
+        user.value = null; // Ensure user is null if no token
+        loading.value = false;
+        isInitialized.value = true;
         return;
       }
       
       token.value = savedToken;
+      console.log('[useAuth] initialize: Set token.value.');
       
       // ดึงข้อมูลผู้ใช้จาก API หรือ localStorage
       const savedUser = localStorage.getItem('auth_user');
+      console.log('[useAuth] initialize: localStorage auth_user:', savedUser);
       if (savedUser) {
-        user.value = JSON.parse(savedUser);
+        try {
+          user.value = JSON.parse(savedUser);
+          console.log('[useAuth] initialize: Parsed and set user.value from localStorage:', user.value);
+        } catch (e) {
+          console.error('[useAuth] initialize: Failed to parse savedUser from localStorage. Clearing user.', e);
+          user.value = null;
+          localStorage.removeItem('auth_user'); // Remove corrupted user data
+          localStorage.removeItem('auth_token'); // Also remove token as state is inconsistent
+          token.value = null;
+        }
       } else {
         // ถ้าไม่มีข้อมูลผู้ใช้ใน localStorage แต่มี token ให้ดึงข้อมูลผู้ใช้จาก API
+        console.log('[useAuth] initialize: No saved user, attempting to fetchUserProfile.');
         await fetchUserProfile();
+        console.log('[useAuth] initialize: fetchUserProfile completed. user.value:', user.value);
       }
     } catch (err: any) {
-      console.error('Failed to initialize auth:', err);
-      error.value = 'ไม่สามารถดึงข้อมูลผู้ใช้ได้';
-      logout();
+      console.error('[useAuth] initialize: Error during initialization:', err);
+      error.value = 'ไม่สามารถดึงข้อมูลผู้ใช้ได้: ' + (err.message || 'Unknown error');
+      // Do not call logout() here as it causes navigation and might hide the root cause or create loops.
+      // Instead, ensure user and token are cleared.
+      user.value = null;
+      token.value = null;
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
     } finally {
       loading.value = false;
       isInitialized.value = true;
+      console.log('[useAuth] initialize: Finished. loading:', loading.value, 'isInitialized:', isInitialized.value, 'user:', user.value);
     }
   };
 
@@ -78,7 +107,10 @@ export function useAuth() {
    * ดึงข้อมูลผู้ใช้จาก API
    */
   const fetchUserProfile = async () => {
+    console.log('[useAuth] fetchUserProfile: Starting.');
     if (!token.value) {
+      console.error('[useAuth] fetchUserProfile: No auth token available.');
+      user.value = null; // Ensure user is cleared if token is missing
       throw new Error('No auth token');
     }
     
@@ -105,6 +137,7 @@ export function useAuth() {
     
     // บันทึกข้อมูลผู้ใช้ลงใน localStorage
     localStorage.setItem('auth_user', JSON.stringify(user.value));
+    console.log('[useAuth] fetchUserProfile: User profile fetched and saved to localStorage:', user.value);
   };
 
   /**
@@ -305,21 +338,24 @@ export function useAuth() {
   // เริ่มต้นตรวจสอบสถานะการเข้าสู่ระบบ
   initialize();
 
+  // Return the reactive state and methods
   return {
-    // State
+    // Reactive State (already module-scoped, but returned for convenience)
     user,
     token,
     loading,
     error,
+    isInitialized,
+    // Computed Properties
     isLoggedIn,
     isAdmin,
-    
     // Methods
+    initialize,
     login,
     register,
     logout,
     changePassword,
-    checkAccess,
     fetchUserProfile,
+    checkAccess,
   };
 }

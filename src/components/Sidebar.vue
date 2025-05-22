@@ -17,6 +17,14 @@
     ></v-list-item>
 
     <v-list-item
+      prepend-icon="mdi-truck"
+      title="ซัพพลายเออร์"
+      value="suppliers"
+      to="/suppliers"
+      :title-opacity="collapsed ? 0 : 1"
+    ></v-list-item>
+
+    <v-list-item
       prepend-icon="mdi-wrench"
       title="งานซ่อม"
       value="repairs"
@@ -29,6 +37,22 @@
       title="สินค้า"
       value="products"
       to="/products"
+      :title-opacity="collapsed ? 0 : 1"
+    ></v-list-item>
+
+    <v-list-item
+      prepend-icon="mdi-shape-outline"
+      title="หมวดหมู่"
+      value="categories"
+      to="/categories"
+      :title-opacity="collapsed ? 0 : 1"
+    ></v-list-item>
+
+    <v-list-item
+      prepend-icon="mdi-ruler"
+      title="หน่วยนับ"
+      value="units"
+      to="/units"
       :title-opacity="collapsed ? 0 : 1"
     ></v-list-item>
 

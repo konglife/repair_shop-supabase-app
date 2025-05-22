@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { supabase } from '../supabaseClient'; // Import supabase client โดยตรง
 import { useSupabaseTable } from '../composables/useSupabaseTable';
 import type { Product } from '../types/product';
 
@@ -10,15 +11,26 @@ export const useProductStore = defineStore('product', {
     selectedProduct: null as Product | null,
     loading: false,
     error: null as any | null,
+    totalProducts: 0,
   }),
   actions: {
-    async fetchAllProducts() {
+    async fetchAllProducts(page: number = 1, pageSize: number = 10) {
       this.loading = true;
       this.error = null;
       try {
-        const data = await productTable.getAll();
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize - 1;
+        
+        const { data, count, error } = await supabase // ใช้ supabase ที่ import โดยตรง
+          .from('products')
+          .select('*, categories(name)', { count: 'exact' }) // ดึงข้อมูล category name
+          .range(start, end);
+
+        if (error) throw error;
+
         if (data !== null && data !== undefined) {
           this.products = data as unknown as Product[];
+          this.totalProducts = count || 0; // อัปเดต totalProducts
         }
       } catch (err) {
         this.error = err;

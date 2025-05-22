@@ -65,14 +65,38 @@ const router = createRouter({
     },
     {
       path: '/products',
-      name: 'Products',
-      component: () => import('./components/Dashboard.vue'), // ใช้ Dashboard แทน HelloWorld
+      name: 'ProductList',
+      component: () => import('./views/ProductList.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/products/new',
+      name: 'AddProduct',
+      component: () => import('./views/ProductForm.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/products/:id/edit',
+      name: 'EditProduct',
+      component: () => import('./views/ProductForm.vue'),
       meta: { requiresAuth: true },
     },
     {
       path: '/reports',
       name: 'Reports',
       component: () => import('./components/Dashboard.vue'), // ใช้ Dashboard แทน HelloWorld
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/categories',
+      name: 'CategoryList',
+      component: () => import('./views/CategoryList.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/units',
+      name: 'UnitList',
+      component: () => import('./views/UnitList.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -84,7 +108,26 @@ const router = createRouter({
     {
       path: '/profile',
       name: 'Profile',
-      component: () => import('./components/Dashboard.vue'), // ใช้ Dashboard แทน HelloWorld
+      component: () => import('./components/Dashboard.vue'), // Placeholder for Profile page
+      meta: { requiresAuth: true },
+    },
+    // Supplier routes
+    {
+      path: '/suppliers',
+      name: 'SupplierList',
+      component: () => import('./views/SupplierList.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/suppliers/new',
+      name: 'AddSupplier',
+      component: () => import('./views/SupplierForm.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/suppliers/:id/edit',
+      name: 'EditSupplier',
+      component: () => import('./views/SupplierForm.vue'),
       meta: { requiresAuth: true },
     },
     // Add other routes here

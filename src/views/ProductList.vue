@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, defineAsyncComponent } from 'vue';
-import { useCustomerStore } from '../stores/customer';
+import { useProductStore } from '../stores/product';
 import { useRouter } from 'vue-router';
 import { useConfirmation } from '../composables/common/useConfirmation';
 import { useNotification } from '../composables/common/useNotification';
 
 // Lazy load components
-const CustomerCard = defineAsyncComponent(() => import('../components/customer/CustomerCard.vue'));
-const CustomerTable = defineAsyncComponent(() => import('../components/customer/CustomerTable.vue'));
-const CustomerFilter = defineAsyncComponent(() => import('../components/customer/CustomerFilter.vue'));
+const ProductCard = defineAsyncComponent(() => import('../components/product/ProductCard.vue'));
+const ProductTable = defineAsyncComponent(() => import('../components/product/ProductTable.vue'));
+const ProductFilter = defineAsyncComponent(() => import('../components/product/ProductFilter.vue'));
 const ConfirmationDialog = defineAsyncComponent(() => import('../components/common/ConfirmationDialog.vue'));
 
-const customerStore = useCustomerStore();
+const productStore = useProductStore();
 const router = useRouter();
 
 // Table and search state
@@ -25,60 +25,57 @@ const { confirm } = useConfirmation();
 // ใช้ useNotification composable
 const { success, error } = useNotification();
 
-
-
-// Load customers on mount
+// Load products on mount
 onMounted(() => {
-  loadCustomers();
+  loadProducts();
 });
 
-const loadCustomers = (page = 1) => {
-  customerStore.fetchAllCustomers(page, pageSize.value);
+const loadProducts = (page = 1) => {
+  productStore.fetchAllProducts(page, pageSize.value);
 };
 
-// Filtered customers based on search query
-const filteredCustomers = computed(() => {
-  if (!searchQuery.value.trim()) return customerStore.customers;
+// Filtered products based on search query
+const filteredProducts = computed(() => {
+  if (!searchQuery.value.trim()) return productStore.products;
   
   const query = searchQuery.value.toLowerCase();
-  return customerStore.customers.filter(customer => {
+  return productStore.products.filter(product => {
     return (
-      customer.name?.toLowerCase().includes(query) ||
-      customer.phone?.includes(query) ||
-      customer.address?.toLowerCase().includes(query)
+      product.name?.toLowerCase().includes(query) ||
+      product.product_code?.toLowerCase().includes(query)
     );
   });
 });
 
 // Check if there are no search results
 const hasSearch = computed(() => searchQuery.value.trim().length > 0);
-const noSearchResults = computed(() => hasSearch.value && filteredCustomers.value.length === 0);
+const noSearchResults = computed(() => hasSearch.value && filteredProducts.value.length === 0);
 
 // Navigation and CRUD operations
-const navigateToAddCustomer = () => {
-  router.push('/customers/new');
+const navigateToAddProduct = () => {
+  router.push('/products/new');
 };
 
 const handleEdit = (id: string) => {
-  router.push(`/customers/${id}/edit`);
+  router.push(`/products/${id}/edit`);
 };
 
 /**
- * เปิดไดอะล็อกยืนยันการลบลูกค้า
- * @param id รหัสลูกค้าที่ต้องการลบ
+ * เปิดไดอะล็อกยืนยันการลบสินค้า
+ * @param id รหัสสินค้าที่ต้องการลบ
  */
 const openDeleteDialog = async (id: string) => {
-  console.log('Opening delete dialog for customer ID:', id);
+  console.log('Opening delete dialog for product ID:', id);
   if (!id) {
-    console.error('Invalid customer ID for deletion');
-    error('ไม่พบรหัสลูกค้าที่ต้องการลบ');
+    console.error('Invalid product ID for deletion');
+    error('ไม่พบรหัสสินค้าที่ต้องการลบ');
     return;
   }
   
   // ใช้ confirm จาก useConfirmation และส่ง options แบบเต็มรูปแบบ
   const confirmed = await confirm({
-    title: 'ยืนยันการลบข้อมูลลูกค้า',
-    message: 'คุณต้องการลบข้อมูลลูกค้ารายนี้ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
+    title: 'ยืนยันการลบข้อมูลสินค้า',
+    message: 'คุณต้องการลบข้อมูลสินค้ารายการนี้ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
     confirmText: 'ลบข้อมูล',
     cancelText: 'ยกเลิก',
     type: 'error',
@@ -86,40 +83,40 @@ const openDeleteDialog = async (id: string) => {
   });
   
   if (confirmed) {
-    // ถ้ายืนยันการลบ ให้ดำเนินการลบลูกค้า
-    await deleteCustomer(id);
+    // ถ้ายืนยันการลบ ให้ดำเนินการลบสินค้า
+    await deleteProduct(id);
   }
 };
 
 /**
- * ลบลูกค้า
- * @param id รหัสลูกค้าที่ต้องการลบ
+ * ลบสินค้า
+ * @param id รหัสสินค้าที่ต้องการลบ
  */
-const deleteCustomer = async (id: string) => {
+const deleteProduct = async (id: string) => {
   try {
-    await customerStore.deleteCustomer(id);
-    success('ลบข้อมูลลูกค้าเรียบร้อยแล้ว');
+    await productStore.deleteProduct(id);
+    success('ลบข้อมูลสินค้าเรียบร้อยแล้ว');
     setTimeout(() => {
-      loadCustomers(currentPage.value);
+      loadProducts(currentPage.value);
     }, 500);
   } catch (err) {
-    console.error('Error deleting customer:', err);
+    console.error('Error deleting product:', err);
     error('ไม่สามารถลบข้อมูลได้ กรุณาลองอีกครั้ง: ' + (err instanceof Error ? err.message : String(err)));
   }
 };
 
 const handleRefresh = () => {
-  loadCustomers(currentPage.value);
+  loadProducts(currentPage.value);
 };
 
 const handlePageChange = (page: number) => {
   currentPage.value = page;
-  loadCustomers(page);
+  loadProducts(page);
 };
 
 const handleSearch = () => {
   currentPage.value = 1;
-  loadCustomers(1);
+  loadProducts(1);
 };
 </script>
 
@@ -133,8 +130,8 @@ const handleSearch = () => {
       <!-- Page Header -->
       <v-card-title class="d-flex justify-space-between align-center flex-wrap pa-4">
         <div>
-          <span class="text-h5 font-weight-bold">รายการลูกค้า</span>
-          <p class="text-subtitle-2 text-medium-emphasis mt-1 mb-0">จัดการข้อมูลลูกค้าทั้งหมดในระบบ</p>
+          <span class="text-h5 font-weight-bold">รายการสินค้า</span>
+          <p class="text-subtitle-2 text-medium-emphasis mt-1 mb-0">จัดการข้อมูลสินค้าทั้งหมดในระบบ</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
           <v-btn
@@ -150,9 +147,9 @@ const handleSearch = () => {
             color="primary"
             prepend-icon="mdi-plus"
             rounded="xl"
-            @click="navigateToAddCustomer"
+            @click="navigateToAddProduct"
           >
-            เพิ่มลูกค้า
+            เพิ่มสินค้า
           </v-btn>
         </div>
       </v-card-title>
@@ -161,13 +158,13 @@ const handleSearch = () => {
 
       <v-card-text class="pa-6">
         <!-- Search Bar -->
-        <CustomerFilter
+        <ProductFilter
           @search="(query) => { searchQuery = query; handleSearch(); }"
           @reset="searchQuery = ''; handleSearch()"
         />
 
         <!-- Loading State -->
-        <div v-if="customerStore.loading" class="d-flex justify-center align-center my-8">
+        <div v-if="productStore.loading" class="d-flex justify-center align-center my-8">
           <v-progress-circular
             indeterminate
             color="primary"
@@ -177,26 +174,26 @@ const handleSearch = () => {
 
         <!-- Error State -->
         <v-alert
-          v-else-if="customerStore.error"
+          v-else-if="productStore.error"
           type="error"
           class="mb-6"
           rounded="xl"
           border="start"
           elevation="2"
         >
-          {{ customerStore.error }}
+          {{ productStore.error }}
         </v-alert>
 
         <!-- Empty State -->
         <v-alert
-          v-else-if="!customerStore.customers.length"
+          v-else-if="!productStore.products.length"
           type="info"
           class="mb-6"
           rounded="xl"
           border="start"
           elevation="2"
         >
-          ไม่พบข้อมูลลูกค้า กรุณาเพิ่มลูกค้าใหม่
+          ไม่พบข้อมูลสินค้า กรุณาเพิ่มสินค้าใหม่
         </v-alert>
 
         <!-- No Search Results -->
@@ -208,15 +205,15 @@ const handleSearch = () => {
           border="start"
           elevation="2"
         >
-          ไม่พบลูกค้าที่ตรงกับคำค้นหา
+          ไม่พบสินค้าที่ตรงกับคำค้นหา
         </v-alert>
 
-        <!-- Customer List - Card View for Mobile (sm and smaller) -->
-        <div v-if="!customerStore.loading && !customerStore.error && customerStore.customers.length > 0 && !noSearchResults && $vuetify.display.smAndDown" class="customer-cards">
-          <CustomerCard 
-            v-for="customer in filteredCustomers" 
-            :key="customer.id" 
-            :customer="customer"
+        <!-- Product List - Card View for Mobile (sm and smaller) -->
+        <div v-if="!productStore.loading && !productStore.error && productStore.products.length > 0 && !noSearchResults && $vuetify.display.smAndDown" class="product-cards">
+          <ProductCard 
+            v-for="product in filteredProducts" 
+            :key="product.id" 
+            :product="product"
             @edit="handleEdit"
             @delete="openDeleteDialog"
             class="mb-4"
@@ -226,7 +223,7 @@ const handleSearch = () => {
           <div class="d-flex justify-center mt-6">
             <v-pagination
               v-model="currentPage"
-              :length="Math.ceil(customerStore.totalCustomers / pageSize)"
+              :length="Math.ceil(productStore.totalProducts / pageSize)"
               @update:model-value="handlePageChange"
               rounded="xl"
               total-visible="3"
@@ -236,12 +233,12 @@ const handleSearch = () => {
           </div>
         </div>
 
-        <!-- Customer Table - For Desktop (md and larger) -->
-        <div v-if="!customerStore.loading && !customerStore.error && customerStore.customers.length > 0 && !noSearchResults && $vuetify.display.mdAndUp" class="table-responsive">
-          <CustomerTable
-            :customers="filteredCustomers"
-            :loading="customerStore.loading"
-            :total-customers="customerStore.totalCustomers"
+        <!-- Product Table - For Desktop (md and larger) -->
+        <div v-if="!productStore.loading && !productStore.error && productStore.products.length > 0 && !noSearchResults && $vuetify.display.mdAndUp" class="table-responsive">
+          <ProductTable
+            :products="filteredProducts"
+            :loading="productStore.loading"
+            :total-products="productStore.totalProducts"
             :current-page="currentPage"
             :page-size="pageSize"
             @edit="handleEdit"
@@ -253,5 +250,3 @@ const handleSearch = () => {
     </v-card>
   </v-container>
 </template>
-
-<!-- ไม่จำเป็นต้องมี <style> -->

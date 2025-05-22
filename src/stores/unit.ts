@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { supabase } from '../supabaseClient'; // Import supabase client โดยตรง
 import { useSupabaseTable } from '../composables/useSupabaseTable';
 import type { Unit } from '../types/unit';
 
@@ -10,15 +11,26 @@ export const useUnitStore = defineStore('unit', {
     selectedUnit: null as Unit | null,
     loading: false,
     error: null as any | null,
+    totalUnits: 0, // เพิ่ม totalUnits
   }),
   actions: {
-    async fetchAllUnits() {
+    async fetchAllUnits(page: number = 1, pageSize: number = 10) { // เพิ่ม page และ pageSize
       this.loading = true;
       this.error = null;
       try {
-        const data = await unitTable.getAll();
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize - 1;
+        
+        const { data, count, error } = await supabase // ใช้ supabase ที่ import โดยตรง
+          .from('units')
+          .select('*', { count: 'exact' })
+          .range(start, end);
+
+        if (error) throw error;
+
         if (data !== null && data !== undefined) {
           this.units = data as unknown as Unit[];
+          this.totalUnits = count || 0; // อัปเดต totalUnits
         }
       } catch (err) {
         this.error = err;

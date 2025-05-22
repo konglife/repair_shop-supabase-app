@@ -4,7 +4,7 @@ export interface Customer {
   phone: string | null;
   address: string | null;
   profile_img_url: string | null;
-  user_id: string; // uuid
+  user_id: string; // uuid 
   created_at: string; // timestamptz
   updated_at: string; // timestamptz
 }

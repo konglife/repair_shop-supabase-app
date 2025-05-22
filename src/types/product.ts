@@ -10,4 +10,5 @@ export interface Product {
   user_id: string; // uuid
   created_at: string; // timestamptz
   updated_at: string; // timestamptz
+  categories?: { name: string } | null; // เพิ่ม field สำหรับ join category name
 }

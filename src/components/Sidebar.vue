@@ -41,6 +41,22 @@
     ></v-list-item>
 
     <v-list-item
+      prepend-icon="mdi-shopping-outline"
+      title="รายการซื้อ"
+      value="purchases"
+      to="/purchases"
+      :title-opacity="collapsed ? 0 : 1"
+    ></v-list-item>
+
+    <v-list-item
+      prepend-icon="mdi-warehouse"
+      title="สต็อกสินค้า"
+      value="stocks"
+      to="/stocks"
+      :title-opacity="collapsed ? 0 : 1"
+    ></v-list-item>
+
+    <v-list-item
       prepend-icon="mdi-shape-outline"
       title="หมวดหมู่"
       value="categories"

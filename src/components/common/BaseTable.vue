@@ -60,7 +60,7 @@ defineProps({
     required: true
   },
   items: {
-    type: Array,
+    type: Array as () => any[],
     default: () => []
   },
   loading: {

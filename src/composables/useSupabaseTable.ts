@@ -6,17 +6,33 @@ export function useSupabaseTable(tableName: string) {
   const error = ref<any | null>(null);
   const loading = ref<boolean>(false);
 
-  const getAll = async (columns = '*') => {
+  const getAll = async (
+    start: number = 0,
+    end: number = 9,
+    queryBuilder?: (query: any) => any, // SupabaseQueryBuilder
+    columns = '*'
+  ): Promise<{ data: any[] | null; count: number | null }> => {
     loading.value = true;
     error.value = null;
-    const { data: resultData, error: resultError } = await supabase
-      .from(tableName)
-      .select(columns);
-    data.value = resultData;
-    error.value = resultError;
-    loading.value = false;
-    if (resultError) throw resultError;
-    return resultData;
+    let query = supabase.from(tableName).select(columns, { count: 'exact' });
+
+    if (queryBuilder) {
+      query = queryBuilder(query);
+    }
+
+    try {
+      const { data: resultData, error: resultError, count: resultCount } = await query
+        .range(start, end);
+
+      data.value = resultData;
+      error.value = resultError;
+      loading.value = false;
+      return { data: resultData, count: resultCount };
+    } catch (err: any) {
+      error.value = err;
+      loading.value = false;
+      throw err;
+    }
   };
 
   const getById = async (id: string, columns = '*') => {

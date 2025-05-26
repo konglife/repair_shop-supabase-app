@@ -130,7 +130,38 @@ const router = createRouter({
       component: () => import('./views/SupplierForm.vue'),
       meta: { requiresAuth: true },
     },
+    // Purchase routes
+    {
+      path: '/purchases',
+      name: 'PurchaseList',
+      component: () => import('./views/PurchaseList.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/stocks',
+      name: 'StockList',
+      component: () => import('./views/StockList.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/purchases/new',
+      name: 'PurchaseNew',
+      component: () => import('./views/PurchaseForm.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/purchases/:id',
+      name: 'PurchaseForm',
+      component: () => import('./views/PurchaseForm.vue'),
+      props: true,
+      meta: { requiresAuth: true },
+    },
     // Add other routes here
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('./views/NotFound.vue'),
+    },
   ],
 });
 

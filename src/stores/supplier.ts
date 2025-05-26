@@ -18,7 +18,7 @@ export const useSupplierStore = defineStore('supplier', {
       try {
         const data = await supplierTable.getAll();
         if (data !== null && data !== undefined) {
-          this.suppliers = data as unknown as Supplier[];
+          this.suppliers = data.data as unknown as Supplier[];
         }
       } catch (err) {
         this.error = err;

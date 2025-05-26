@@ -1,8 +1,6 @@
 import { defineStore } from 'pinia';
-import { useSupabaseTable } from '../composables/useSupabaseTable';
-import type { Stock } from '../types/stock';
-
-const stockTable = useSupabaseTable('stocks');
+import type { Stock } from '@/types/stock';
+import { supabase } from '@/supabaseClient';
 
 export const useStockStore = defineStore('stock', {
   state: () => ({
@@ -10,19 +8,32 @@ export const useStockStore = defineStore('stock', {
     selectedStock: null as Stock | null,
     loading: false,
     error: null as any | null,
+    totalItems: 0,
   }),
   actions: {
-    async fetchAllStocks() {
+    async fetchAllStocks(page: number = 1, itemsPerPage: number = 10) {
       this.loading = true;
       this.error = null;
       try {
-        const data = await stockTable.getAll();
-        if (data !== null && data !== undefined) {
-          this.stocks = data as unknown as Stock[];
-        }
-      } catch (err) {
-        this.error = err;
-        console.error('Error fetching stocks:', err);
+        const from = (page - 1) * itemsPerPage;
+        const to = from + itemsPerPage - 1;
+
+        const { data, error, count } = await supabase
+          .from('stocks')
+          .select(
+            `
+            *, products(*, units(*))
+            `,
+            { count: 'exact' }
+          )
+          .range(from, to);
+
+        if (error) throw error;
+        this.stocks = data.map(stock => ({ ...stock, status: this.calculateStockStatus(stock.min_stock, stock.current_stock) })) as unknown as Stock[];
+        this.totalItems = count || 0;
+      } catch (error: any) {
+        this.error = error;
+        console.error('Error fetching stocks:', error);
       } finally {
         this.loading = false;
       }
@@ -32,55 +43,86 @@ export const useStockStore = defineStore('stock', {
       this.loading = true;
       this.error = null;
       try {
-        const data = await stockTable.getById(id);
-         if (data !== null && data !== undefined) {
-          this.selectedStock = data as unknown as Stock;
+        const { data, error } = await supabase
+          .from('stocks')
+          .select(
+            `
+            *, products(*, units(*))
+            `
+          )
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          this.selectedStock = { ...data, status: this.calculateStockStatus(data.min_stock, data.current_stock) } as unknown as Stock;
         }
-      } catch (err) {
+      } catch (err: any) {
         this.error = err;
-        console.error(`Error fetching stock with ID ${id}:`, err);
+        console.error('Error fetching stock by ID:', err);
       } finally {
         this.loading = false;
       }
     },
 
-    async createStock(stockData: Omit<Stock, 'id' | 'last_updated_at'>) {
+    async createStock(stockData: Omit<Stock, 'id' | 'created_at' | 'updated_at' | 'products' | 'units'>) {
       this.loading = true;
       this.error = null;
       try {
-        const newStock = await stockTable.create(stockData);
-        if (newStock !== null && newStock !== undefined) {
-          this.stocks.push(newStock as unknown as Stock);
+        const { data, error } = await supabase
+          .from('stocks')
+          .insert([stockData])
+          .select(
+            `
+            *, products(*, units(*))
+            `
+          )
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          const newStock = { ...data, status: this.calculateStockStatus(data.min_stock, data.current_stock) } as unknown as Stock;
+          this.stocks.push(newStock);
         }
-        return newStock as unknown as Stock;
-      } catch (err) {
+      } catch (err: any) {
         this.error = err;
         console.error('Error creating stock:', err);
-        throw err;
       } finally {
         this.loading = false;
       }
     },
 
-    async updateStock(id: string, stockData: Partial<Omit<Stock, 'id' | 'last_updated_at'>>) {
+    async updateStock(id: string, stockData: Partial<Omit<Stock, 'id' | 'created_at' | 'updated_at' | 'products' | 'units'>>) {
       this.loading = true;
       this.error = null;
       try {
-        const updatedStock = await stockTable.update(id, stockData);
-        if (updatedStock) {
+        const { data, error } = await supabase
+          .from('stocks')
+          .update(stockData)
+          .eq('id', id)
+          .select(
+            `
+            *, products(*, units(*))
+            `
+          )
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          const updatedStock = { ...data, status: this.calculateStockStatus(data.min_stock, data.current_stock) } as unknown as Stock;
           const index = this.stocks.findIndex(s => s.id === id);
           if (index !== -1) {
-            this.stocks[index] = updatedStock as Stock;
+            this.stocks[index] = updatedStock;
           }
           if (this.selectedStock?.id === id) {
-             this.selectedStock = updatedStock as Stock;
+            this.selectedStock = updatedStock;
           }
         }
-        return updatedStock as Stock;
-      } catch (err) {
+        return data as unknown as Stock;
+      } catch (err: any) {
         this.error = err;
-        console.error(`Error updating stock with ID ${id}:`, err);
-        throw err;
+        console.error('Error updating stock:', err);
+        return null;
       } finally {
         this.loading = false;
       }
@@ -90,17 +132,31 @@ export const useStockStore = defineStore('stock', {
       this.loading = true;
       this.error = null;
       try {
-        await stockTable.remove(id);
+        const { error } = await supabase
+          .from('stocks')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
         this.stocks = this.stocks.filter(s => s.id !== id);
         if (this.selectedStock?.id === id) {
           this.selectedStock = null;
         }
-      } catch (err) {
+      } catch (err: any) {
         this.error = err;
-        console.error(`Error deleting stock with ID ${id}:`, err);
-        throw err;
+        console.error('Error deleting stock:', err);
       } finally {
         this.loading = false;
+      }
+    },
+
+    calculateStockStatus(minStock: number, currentStock: number): 'In Stock' | 'Low Stock' | 'Out of Stock' {
+      if (currentStock === 0) {
+        return 'Out of Stock';
+      } else if (currentStock <= minStock) {
+        return 'Low Stock';
+      } else {
+        return 'In Stock';
       }
     },
   },

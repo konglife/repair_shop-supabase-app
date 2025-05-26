@@ -10,16 +10,25 @@ export const usePurchaseStore = defineStore('purchase', {
     selectedPurchase: null as Purchase | null,
     loading: false,
     error: null as any | null,
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
   }),
   actions: {
-    async fetchAllPurchases() {
+    async fetchPurchases(page: number = 1, itemsPerPage: number = 10) {
       this.loading = true;
       this.error = null;
       try {
-        const data = await purchaseTable.getAll();
-        if (data !== null && data !== undefined) {
-          this.purchases = data as unknown as Purchase[];
-        }
+        console.log('fetchPurchases called with:', { page, itemsPerPage });
+        const { data, count } = await purchaseTable.getAll(
+          (page - 1) * itemsPerPage,
+          page * itemsPerPage - 1,
+          (query: any) => query.order('created_at', { ascending: false }) // Pass query builder for ordering
+        );
+
+        this.purchases = data || [];
+        this.totalItems = count || 0;
+        console.log('fetchPurchases completed. Total items:', this.totalItems, 'Data:', this.purchases);
       } catch (err) {
         this.error = err;
         console.error('Error fetching purchases:', err);

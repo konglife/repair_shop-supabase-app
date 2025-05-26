@@ -10,18 +10,28 @@ export const usePurchaseItemStore = defineStore('purchaseItem', {
     selectedPurchaseItem: null as PurchaseItem | null,
     loading: false,
     error: null as any | null,
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
   }),
   actions: {
-    // Note: This action fetches all purchase items.
-    // In a real application, you would likely want to fetch items for a specific purchase.
-    async fetchAllPurchaseItems() {
+    async fetchPurchaseItems(purchaseId: string | null = null, page: number = 1, itemsPerPage: number = 10) {
       this.loading = true;
       this.error = null;
       try {
-        const data = await purchaseItemTable.getAll();
-        if (data !== null && data !== undefined) {
-          this.purchaseItems = data as unknown as PurchaseItem[];
+        let queryBuilderFn = (query: any) => query;
+        if (purchaseId) {
+          queryBuilderFn = (query: any) => query.eq('purchase_id', purchaseId);
         }
+        const { data, count } = await purchaseItemTable.getAll(
+          (page - 1) * itemsPerPage,
+          page * itemsPerPage - 1,
+          queryBuilderFn
+        );
+        this.purchaseItems = data as PurchaseItem[];
+        this.totalItems = count || 0;
+        this.currentPage = page;
+        this.itemsPerPage = itemsPerPage;
       } catch (err) {
         this.error = err;
         console.error('Error fetching purchase items:', err);
@@ -64,7 +74,11 @@ export const usePurchaseItemStore = defineStore('purchaseItem', {
       }
     },
 
-    async updatePurchaseItem(id: string, purchaseItemData: Partial<Omit<PurchaseItem, 'id'>>) {
+    async updatePurchaseItem(id: string | null, purchaseItemData: Partial<Omit<PurchaseItem, 'id'>>) {
+      if (id === null) {
+        console.error('Cannot update purchase item with null ID.');
+        return;
+      }
       this.loading = true;
       this.error = null;
       try {

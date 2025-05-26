@@ -1,9 +1,27 @@
 export interface Stock {
-  id: string; // uuid
-  product_id: string; // uuid
-  min_stock: number; // integer
-  current_stock: number; // integer
-  status: string; // text (e.g., 'out_of_stock', 'low', 'available')
-  last_updated_at: string; // timestamptz
-  user_id: string; // uuid
+  id: string;
+  product_id: string;
+  min_stock: number;
+  current_stock: number;
+  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  created_at: string;
+  updated_at: string;
+  products?: {
+    id?: string;
+    product_code?: string;
+    name?: string;
+    unit_id?: string;
+    price?: number;
+    cost?: number;
+    note?: string;
+    user_id?: string;
+    created_at?: string;
+    updated_at?: string;
+    units?: {
+      id?: string;
+      name?: string;
+      user_id?: string;
+      created_at?: string;
+    };
+  };
 }
